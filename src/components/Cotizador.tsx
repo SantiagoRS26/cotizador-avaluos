@@ -7,8 +7,53 @@ import axios from "axios";
 // Coordenadas de la oficina del avaluador
 const oficinaAvaluador = { lat: 4.601955010311332, lng: -74.07203983933485 };
 
+// Definir los precios por área como un arreglo ordenado
+const preciosAreaArray = [
+    { area: 20, price: 100000 },
+    { area: 40, price: 150000 },
+    { area: 60, price: 200000 },
+    { area: 80, price: 250000 },
+    { area: 100, price: 300000 },
+    { area: 120, price: 350000 },
+];
+
+// Precio por kilómetro recorrido (ejemplo)
+const precioPorKilometro = 15000;
+
+// Función de interpolación lineal para determinar el precio basado en el área
+const getPriceForArea = (area: number): number => {
+    // Si el área es menor o igual al mínimo, retornar el precio mínimo
+    if (area <= preciosAreaArray[0].area) {
+        return preciosAreaArray[0].price;
+    }
+
+    // Si el área es mayor o igual al máximo, retornar el precio máximo
+    if (area >= preciosAreaArray[preciosAreaArray.length - 1].area) {
+        return preciosAreaArray[preciosAreaArray.length - 1].price;
+    }
+
+    // Encontrar los dos puntos de referencia más cercanos
+    for (let i = 0; i < preciosAreaArray.length - 1; i++) {
+        const lower = preciosAreaArray[i];
+        const upper = preciosAreaArray[i + 1];
+
+        if (area === lower.area) {
+            return lower.price;
+        }
+
+        if (area > lower.area && area < upper.area) {
+            // Interpolación lineal
+            const slope = (upper.price - lower.price) / (upper.area - lower.area);
+            return lower.price + slope * (area - lower.area);
+        }
+    }
+
+    // En caso de que no se encuentre, retornar el precio base
+    return preciosAreaArray[0].price;
+};
+
 const Cotizador = () => {
-    const [area, setArea] = useState<20 | 40 | 60 | 80 | 100 | 120>(20);
+    const [area, setArea] = useState<number>(20); // Ahora cualquier número
     const [pisos, setPisos] = useState<number>(1);
     const [ubicacionInmueble, setUbicacionInmueble] = useState<{
         lat: number;
@@ -17,18 +62,6 @@ const Cotizador = () => {
     const [distanciaRuta, setDistanciaRuta] = useState<number>(0); // Distancia de la ruta
     const [tiempoRuta, setTiempoRuta] = useState<string>(""); // Tiempo estimado de la ruta
     const [ruta, setRuta] = useState<Array<[number, number]>>([]); // Coordenadas de la ruta
-
-    // Precios por área en COP
-    const preciosArea: { [key in 20 | 40 | 60 | 80 | 100 | 120]: number } = {
-        20: 100000,
-        40: 150000,
-        60: 200000,
-        80: 250000,
-        100: 300000,
-        120: 350000,
-    };
-
-    const precioPorKilometro = 15000; // Precio por km recorrido (ejemplo)
 
     // Función para hacer la solicitud de enrutamiento a la API de OSRM
     const calcularRuta = async (latInmueble: number, lngInmueble: number) => {
@@ -57,7 +90,7 @@ const Cotizador = () => {
 
     // Calcular el precio final
     const calcularAvaluo = () => {
-        const precioBase = preciosArea[area];
+        const precioBase = getPriceForArea(area);
         const precioPisos = precioBase * pisos;
 
         // Calcular el costo de desplazamiento por km
@@ -97,21 +130,16 @@ const Cotizador = () => {
                     className="block text-lg font-semibold text-gray-700">
                     Área (m²):
                 </label>
-                <select
+                <input
+                    type="number"
                     id="area"
                     value={area}
-                    onChange={(e) =>
-                        setArea(Number(e.target.value) as 20 | 40 | 60 | 80 | 100 | 120)
-                    }
-                    className="w-full p-3 mt-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
-                    {Object.keys(preciosArea).map((key) => (
-                        <option
-                            key={key}
-                            value={key}>
-                            {key} m²
-                        </option>
-                    ))}
-                </select>
+                    onChange={(e) => setArea(Number(e.target.value))}
+                    min="1"
+                    step="1"
+                    className="w-full p-3 mt-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    placeholder="Ingrese el área en m²"
+                />
             </div>
 
             {/* Selección de número de pisos */}
