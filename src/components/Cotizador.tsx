@@ -1,7 +1,7 @@
 // src/components/Cotizador.tsx
 
 import React, { useState } from "react";
-import Mapa from "./Map"; // Asegúrate de que la ruta de importación sea correcta
+import Mapa from "./Map";	
 import axios from "axios";
 
 // Coordenadas de la oficina del avaluador
@@ -21,35 +21,53 @@ const preciosAreaArray = [
 const precioPorKilometro = 15000;
 
 // Función de interpolación lineal para determinar el precio basado en el área
-const getPriceForArea = (area: number): number => {
-    // Si el área es menor o igual al mínimo, retornar el precio mínimo
-    if (area <= preciosAreaArray[0].area) {
-        return preciosAreaArray[0].price;
-    }
+const getPrecisePriceForArea = (area: number): number => {
+    let totalWeight = 0;
+    let weightedSum = 0;
 
-    // Si el área es mayor o igual al máximo, retornar el precio máximo
-    if (area >= preciosAreaArray[preciosAreaArray.length - 1].area) {
-        return preciosAreaArray[preciosAreaArray.length - 1].price;
-    }
-
-    // Encontrar los dos puntos de referencia más cercanos
+    // Recorremos el array de precios
     for (let i = 0; i < preciosAreaArray.length - 1; i++) {
         const lower = preciosAreaArray[i];
         const upper = preciosAreaArray[i + 1];
 
-        if (area === lower.area) {
-            return lower.price;
-        }
+        // Calculamos la pendiente entre dos puntos
+        const slope = (upper.price - lower.price) / (upper.area - lower.area);
 
-        if (area > lower.area && area < upper.area) {
-            // Interpolación lineal
-            const slope = (upper.price - lower.price) / (upper.area - lower.area);
+        // Si el área está dentro del rango actual
+        if (area >= lower.area && area <= upper.area) {
             return lower.price + slope * (area - lower.area);
         }
+
+        // Calculamos peso inversamente proporcional a la distancia
+        const midPoint = (lower.area + upper.area) / 2;
+        const distance = Math.abs(area - midPoint);
+        const weight = 1 / (1 + distance);
+
+        // Sumamos al promedio ponderado
+        totalWeight += weight;
+        weightedSum += weight * (lower.price + slope * (area - lower.area));
     }
 
-    // En caso de que no se encuentre, retornar el precio base
-    return preciosAreaArray[0].price;
+    // Ajuste para valores fuera del rango definido
+    const last = preciosAreaArray[preciosAreaArray.length - 1];
+    const first = preciosAreaArray[0];
+
+    if (area > last.area) {
+        // Extrapolar usando la pendiente del último tramo
+        const secondLast = preciosAreaArray[preciosAreaArray.length - 2];
+        const slope = (last.price - secondLast.price) / (last.area - secondLast.area);
+        return last.price + slope * (area - last.area);
+    }
+
+    if (area < first.area) {
+        // Extrapolar usando la pendiente del primer tramo
+        const second = preciosAreaArray[1];
+        const slope = (second.price - first.price) / (second.area - first.area);
+        return first.price + slope * (area - first.area);
+    }
+
+    // Retornar el promedio ponderado para valores intermedios
+    return weightedSum / totalWeight;
 };
 
 const Cotizador = () => {
@@ -90,7 +108,7 @@ const Cotizador = () => {
 
     // Calcular el precio final
     const calcularAvaluo = () => {
-        const precioBase = getPriceForArea(area);
+        const precioBase = getPrecisePriceForArea(area);
         const precioPisos = precioBase * pisos;
 
         // Calcular el costo de desplazamiento por km
