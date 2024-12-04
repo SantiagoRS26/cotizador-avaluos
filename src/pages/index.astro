@@ -1,6 +1,4 @@
 ---
-import Welcome from "../components/Welcome.astro";
-import Cotizador from "../components/Cotizador.tsx";
 import Layout from "../layouts/Layout.astro";
 import ServicesList from "../components/ServicesList";
 
@@ -10,5 +8,14 @@ import ServicesList from "../components/ServicesList";
 
 <Layout>
 	<!-- <Cotizador client:only /> -->
-	 <ServicesList client:only/>
+	<div class="flex items-center justify-center pt-10">
+		<div class="flex w-11/12">
+			<a
+				href="/cotizador-avaluos"
+				class="text-center font-bold p-5 border-2 rounded-lg border-gray-500 hover:bg-gray-500 hover:text-white transition"
+				>Cotizador de Avaluos</a
+			>
+		</div>
+	</div>
+	<ServicesList client:only />
 </Layout>
